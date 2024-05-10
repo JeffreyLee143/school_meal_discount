@@ -5,24 +5,24 @@ import json
 db_settings_file=open('src\db_setting.json','r')
 db_settings=json.load(db_settings_file)
 
-def add_member(member_number,member_name,member_mail):
+def add_member(member_id,member_name):
     try:
         conn = pymysql.connect(**db_settings)
         with conn.cursor() as cursor:
-            command = "INSERT INTO `members`(member_number,member_name,member_mail)VALUE(%s,%s,%s)"
+            command = "INSERT INTO `members`(member_id,member_name)VALUE(%s,%s)"
             cursor.execute(
-                command, (member_number,member_name,member_mail)
+                command, (member_id,member_name)
             )
             conn.commit()
     except Exception as ex:
         print(ex)
 
-def delete_member(member_mail):
+def delete_member(member_id):
     try:
         conn = pymysql.connect(**db_settings)
         with conn.cursor() as cursor:
-            command = "DELETE FROM `members` WHERE member_mail = %s"
-            cursor.execute(command,(member_mail))
+            command = "DELETE FROM `members` WHERE member_id = %s"
+            cursor.execute(command,(member_id))
             conn.commit()
     except Exception as ex:
         print(ex)
@@ -85,6 +85,21 @@ def add_menu(shop_id,product_name,product_price,count):
     except Exception as ex:
         print(ex)
 
+def view_menu(shop_id):
+    try:
+        conn = pymysql.connect(**db_settings)
+        with conn.cursor() as cursor:
+            command = "SELECT * FROM `shops` WHERE shop_id = %s"
+            cursor.execute(
+                command, (shop_id)
+            )
+            str=''
+            for i in cursor:
+                str=i[4]
+            return str
+    except Exception as ex:
+        print(ex)
+
 def run_time():
     try:
         conn = pymysql.connect(**db_settings)
@@ -96,6 +111,7 @@ def run_time():
             for i in cursor:
                 str=str+i[0]+' : '+ i[1] + '\n'
                 run_time_dic[i[0]]=i[1]
+            str = str.rstrip()
             return str
     except Exception as ex:
         print(ex)
@@ -111,7 +127,6 @@ with open("src\menu.csv",newline='',encoding=encoding) as csvfile:
         add_menu(int(product['shop_id']),product['product_name'],float(product['cost']),count)
         count+=1
 '''
-
 
 #shop_name = {"早安美廣","傳香飯糰","八方雲集","宜廷小吃","琪美食堂","美廣鮮果吧","自助餐"}
 #for i in shop_name:

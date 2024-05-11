@@ -2,6 +2,7 @@
 import csv
 import pymysql
 import json
+import math
 db_settings_file=open('src\db_setting.json','r')
 db_settings=json.load(db_settings_file)
 
@@ -109,10 +110,75 @@ def run_time():
             run_time_dic={}
             str=''
             for i in cursor:
-                str=str+i[0]+' : '+ i[1] + '\n'
+                str+=i[0]+' : '+ i[1] + '\n'
                 run_time_dic[i[0]]=i[1]
             str = str.rstrip()
             return str
+    except Exception as ex:
+        print(ex)
+
+def order_detail(msg):
+    msg=msg.split('\n')
+    shop_name=msg[0]
+    shop_id=check_shop_id(shop_name)[0]
+    product_name=''
+    product_number=''
+    total_cost=0
+    for row in msg[1:]:
+        row=row.split(',')
+        prouct_detail=check_product(shop_id,row[0])
+        product_name+=str(prouct_detail[0])+','
+        product_number+=row[1]+','
+        total_cost+=float(prouct_detail[1])*float(row[1])
+    round(total_cost,0)
+    product_name = product_name.rstrip(',')
+    product_number = product_number.rstrip(',')
+    order_detail={
+        'shop_id':str(shop_id),'product_name':str(product_name),'product_number':str(product_number),'total_cost':str(int(total_cost))
+    }
+    return order_detail
+
+def check_product(shop_id,product_name):
+    try:
+        conn = pymysql.connect(**db_settings)
+        with conn.cursor() as cursor:
+            command = "SELECT * FROM `menu` WHERE shop_id = %s AND product_name = %s"
+            cursor.execute(
+                command, (int(shop_id),product_name)
+            )
+            str=[]
+            for i in cursor:
+                str.append(i[1])
+                str.append(i[3])
+            return str
+    except Exception as ex:
+        print(ex)
+
+def check_shop_id(shop_name):
+    try:
+        conn = pymysql.connect(**db_settings)
+        with conn.cursor() as cursor:
+            command = "SELECT * FROM `shops` WHERE shop_name = %s"
+            cursor.execute(
+                command, (shop_name)
+            )
+            str=[]
+            for i in cursor:
+                str.append(i[0])
+            return str
+    except Exception as ex:
+        print(ex)
+
+def order_now(msg):
+    order=order_detail(msg)
+    try:
+        conn = pymysql.connect(**db_settings)
+        with conn.cursor() as cursor:
+            command = "INSERT INTO `order_histories`(shop_id,product_name,product_number,total_cost)VALUE(%s,%s,%s,%s)"
+            cursor.execute(
+                command, (order['shop_id'],order['product_name'],order['product_number'],order['total_cost'])
+            )
+            conn.commit()
     except Exception as ex:
         print(ex)
 '''
@@ -122,17 +188,13 @@ with open('src\menu.csv', 'rb') as f:
 encoding = result['encoding']
 with open("src\menu.csv",newline='',encoding=encoding) as csvfile:
     count = 1
+    shop_id=1
     menu = csv.DictReader(csvfile)
     for product in menu:
+        if(int(product['shop_id'])!=shop_id):
+            count=1
+            shop_id+=1
         add_menu(int(product['shop_id']),product['product_name'],float(product['cost']),count)
         count+=1
 '''
 
-#shop_name = {"早安美廣","傳香飯糰","八方雲集","宜廷小吃","琪美食堂","美廣鮮果吧","自助餐"}
-#for i in shop_name:
-#    add_shop(i)
-#add_member("09123456789","Jeffrey","anb@gmail.com")
-#delete_member("anb@gmail.com")
-#delete_shop("big_shop@gmail.com")
-#add_order(1,"'蛋餅',2,'巧克力',3",5000)
-#delete_order(1,1)

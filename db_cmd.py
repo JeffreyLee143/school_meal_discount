@@ -3,6 +3,8 @@ import csv
 import pymysql
 import json
 import math
+import time
+import datetime
 db_settings_file=open('src\db_setting.json','r')
 db_settings=json.load(db_settings_file)
 
@@ -62,15 +64,33 @@ def add_order(shop_id,product_name,total_cost):
     except Exception as ex:
         print(ex)
 
-def delete_order(order_id,shop_id):
+def delete_order(order_id,time):
     try:
         conn = pymysql.connect(**db_settings)
         with conn.cursor() as cursor:
-            command = "DELETE FROM `order_histories` WHERE order_id = %s AND shop_id= %s"
+            command = "SELECT trade_date FROM `order_histories` WHERE order_id = %s"
             cursor.execute(
-                command, (int(order_id),int(shop_id))
+                command, (int(order_id),)
             )
-            conn.commit()
+            datetime1 = cursor.fetchone()[0]
+            datetime2 = datetime.datetime.fromtimestamp(time/1000)
+            timedelta = datetime2 - datetime1
+            print(timedelta)
+            if(timedelta > datetime.timedelta(minutes=1)):
+                print(1)
+                message='店家已經接收並開始製作訂單\n故無法取消'
+                print(message)
+                return message
+            elif(timedelta<=datetime.timedelta(minutes=1)):
+                print(2)
+                command = "DELETE FROM `order_histories` WHERE order_id = %s"
+                cursor.execute(
+                    command, (int(order_id),)
+                )
+                conn.commit()
+                message='刪除成功'
+                print(message)
+                return message
     except Exception as ex:
         print(ex)
 
@@ -179,6 +199,12 @@ def order_now(msg):
                 command, (order['shop_id'],order['product_name'],order['product_number'],order['total_cost'])
             )
             conn.commit()
+            command = "SELECT `order_id` FROM `order_histories` WHERE shop_id = %s AND product_name = %s ORDER BY `order_id` DESC LIMIT 1"
+            cursor.execute(
+                command, (order['shop_id'],order['product_name'])
+            )
+            for i in cursor:
+                return str(i[0])
     except Exception as ex:
         print(ex)
 '''

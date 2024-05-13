@@ -72,7 +72,28 @@ def view_menu(msg,reply_token,hint):
 
 #立即點餐
 def order_now(msg,reply_token,hint):
-    db_cmd.order_now(msg)
+    msg2 = [line.split(',') for line in msg.split('\n')]
+    msg3 = [item for sublist in msg2 for item in sublist]
+    msg4 = [line.split('，') for line in msg3]
+    msg_clone = [item for sublist in msg4 for item in sublist]
+    store=['早安美廣', '傳香飯糰', '八方雲集', '宜廷小吃', '琪美食堂', '美廣鮮果吧', '自助餐']
+    if(msg_clone[0] not in store):
+        line_bot_api.reply_message(reply_token,TextMessage(text='請輸入正確的店家名稱或是輸入完店家空行\n'+hint))
+        print("error")
+    else:
+        for i in range(2, len(msg_clone), 2):
+            if not msg_clone[i].isdigit():
+                line_bot_api.reply_message(reply_token,TextMessage(text='請輸入正確的數量(數字)\n'+hint))
+                print("error")
+        order_id=db_cmd.order_now(msg)
+        line_bot_api.reply_message(reply_token,TextMessage(text='訂單完成\n你的訂單id是'+order_id))
+        Msg_package.flag=-1
+
+#取消訂單
+def delete_order(msg,time,reply_token,hint):
+    message = db_cmd.delete_order(msg,time)
+    print(message)
+    line_bot_api.reply_message(reply_token,TextMessage(text=message))
     Msg_package.flag=-1
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -106,6 +127,18 @@ def handle_message(event):
     #case "優惠資訊":
     if(message_text=="優惠資訊"):
         print("優惠資訊")
+    #case "取消訂單"
+    if(message_text=="取消訂單"or Msg_package.flag==4):
+        hint='請給我你的訂單id'
+        if(Msg_package.flag==-1):
+            print("取消訂單")
+            line_bot_api.reply_message(reply_token, TextSendMessage(text=hint))
+            Msg_package.flag=4
+        else:
+            Msg_package.msg=message_text
+            timestamp = event.timestamp
+            print(timestamp)
+            delete_order(Msg_package.msg,timestamp,reply_token,hint)
 
 #加入好友後建立會員資料進資料庫
 @handler.add(FollowEvent)

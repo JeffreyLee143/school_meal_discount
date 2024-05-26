@@ -201,8 +201,8 @@ def handle_message(event):
                     line_bot_api.reply_message(reply_token, TextSendMessage(text='點數不足'))
                     Msg_package.flag=-1
             else:
-                line_bot_api.reply_message(reply_token, TextSendMessage(text='你輸入的不是數字'))
-                Msg_package.flag=-1
+                line_bot_api.reply_message(reply_token, TextSendMessage(text='你輸入的不是數字\n請重新輸入'))
+                Msg_package.flag=6
     #case "會員資訊":
     if(message_text=="會員資訊"):
         member_information=db_cmd.member_information(Msg_package.user_id)

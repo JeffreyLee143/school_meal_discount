@@ -7,7 +7,9 @@ from linebot.models import *
 import json
 import matplotlib.pyplot as plt
 import matplotlib.image as img
-import db_lib.db_cmd as db_cmd
+import db_cmd 
+from time import sleep
+import threading
 db_settings_file=open('src\db_setting.json','r')
 db_settings=json.load(db_settings_file)
 ngrok_path = 'src\\ngrok.exe'
@@ -16,8 +18,10 @@ conf.get_default().auth_token = '2fzU7K2oDcw4rNQ4i8JMEoZrzpV_28yEF9t59wiXrMQULEB
 #conf.get_default().auth_token = getpass.getpass(auth)
 
 class Msg_package:
+    now_id=0
     msg='' #保存使用者訊息
     flag=-1 #判斷是否被占用
+    user_id=''
 
 # Open a TCP ngrok tunnel to the SSH server
 connection_string = ngrok.connect("22", "tcp").public_url
@@ -70,7 +74,7 @@ def view_menu(msg,reply_token,hint):
         Msg_package.flag=-1
 
 #立即點餐
-def order_now(msg,reply_token,hint):
+def order_now(msg,reply_token,hint,user_id):
     msg2 = [line.split(',') for line in msg.split('\n')]
     msg3 = [item for sublist in msg2 for item in sublist]
     msg4 = [line.split('，') for line in msg3]
@@ -84,10 +88,14 @@ def order_now(msg,reply_token,hint):
             if not msg_clone[i].isdigit():
                 line_bot_api.reply_message(reply_token,TextMessage(text='請輸入正確的數量(數字)\n'+hint))
                 print("error")
-        order_id=db_cmd.order_now(msg)
-        line_bot_api.reply_message(reply_token,TextMessage(text='訂單完成\n你的訂單id是'+order_id))
+        order_id=db_cmd.order_now(msg,Msg_package.user_id)
+        Msg_package.now_id=order_id
+        line_bot_api.reply_message(reply_token,TextMessage(text='訂單完成\n你的訂單id是'+str(order_id)))
         Msg_package.flag=-1
-
+        thread = threading.Thread(target=order_finish_or_not, args=(Msg_package.user_id,))
+        thread.daemon = True
+        thread.start()
+        
 #查看訂單
 def view_order(msg,reply_token,hint):
     if not msg.isdigit():
@@ -100,7 +108,6 @@ def view_order(msg,reply_token,hint):
             line_bot_api.reply_message(reply_token,TextMessage(text=message))
             Msg_package.flag=-1
 
-
 #取消訂單      
 def delete_order(msg,time,reply_token,hint):
     if not msg.isdigit():
@@ -109,11 +116,22 @@ def delete_order(msg,time,reply_token,hint):
         message = db_cmd.delete_order(msg,time)
         line_bot_api.reply_message(reply_token,TextMessage(text=message))
         Msg_package.flag=-1
+        
+#訂單是否完成
+def order_finish_or_not(user_id):
+    while(Msg_package.now_id != 0):
+        order_status = db_cmd.check_order_finish(Msg_package.now_id)
+        if(order_status == 1):
+            line_bot_api.push_message(user_id, messages=[TextSendMessage(text="你的訂單"+Msg_package.now_id+"已經完成\n請前往學餐取餐點")])
+            Msg_package.now_id=0
+        sleep(2)    
+            
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     message_text = event.message.text
     reply_token = event.reply_token
+    Msg_package.user_id = event.source.user_id
     #case "營業時間"
     if(message_text=="營業時間" or Msg_package.flag==1):
         line_bot_api.reply_message(reply_token,TextMessage(text=db_cmd.run_time()))
@@ -133,11 +151,14 @@ def handle_message(event):
         hint='輸入格式如下:\n店家名稱\n商品名稱,數量'
         if(Msg_package.flag==-1):
             print("立即點餐")
-            line_bot_api.reply_message(reply_token, TextSendMessage(text=hint))
-            Msg_package.flag=3
+            if(Msg_package.now_id != 0):
+                line_bot_api.reply_message(reply_token, TextSendMessage(text='你先前的訂單尚未完成'))
+            else:
+                line_bot_api.reply_message(reply_token, TextSendMessage(text=hint))
+                Msg_package.flag=3
         else:
             Msg_package.msg=message_text
-            order_now(Msg_package.msg,reply_token,hint)
+            order_now(Msg_package.msg,reply_token,hint,Msg_package.user_id)
     #case "查看訂單"
     if(message_text=="查看訂單"or Msg_package.flag==4):
         hint='請給我你的訂單id'
@@ -161,15 +182,31 @@ def handle_message(event):
             print(timestamp)
             delete_order(Msg_package.msg,timestamp,reply_token,hint)
     #case "優惠資訊":
-    if(message_text=="優惠資訊"or Msg_package.flag==6):
-        print("優惠資訊")
-        line_bot_api.reply_message(reply_token,TextMessage(text=db_cmd.discount_information()))
-        Msg_package.flag=-1
+    if(message_text=="優惠資訊"):
+        line_bot_api.reply_message(reply_token, TextSendMessage(text="活動規則:\n1.消費每五十元集一點，消費時一點可抵一元。\n2.花費點數參加抽獎\n抽獎方式為隨機骰0~100,如果>60點則獲得花費點數*(1+(骰的數字-60))/100\n如果<=60則抽獎失敗\n輸入 我要抽獎 開始抽獎"))
+    #case "抽獎系統":
+    if(message_text=="我要抽獎"or Msg_package.flag==6):
+        if(Msg_package.flag==-1):
+            line_bot_api.reply_message(reply_token, TextSendMessage(text='花費點數參加抽獎，獲得點數為花費的點數加上抽出的數字\n請輸入要花費的點數(請輸入數字)'))
+            Msg_package.flag=6
+        else:
+            msg=message_text
+            Msg_package.user_id=event.source.user_id
+            if msg.isdigit():
+                if db_cmd.spend_point(Msg_package.user_id,int(msg)):
+                    rate=db_cmd.lottery(Msg_package.user_id,int(msg))
+                    line_bot_api.reply_message(reply_token, TextSendMessage(text='骰到的數字為: '+str(rate[0])+'\n總共獲得: '+str(rate[1])+'點'))
+                    Msg_package.flag=-1
+                else:
+                    line_bot_api.reply_message(reply_token, TextSendMessage(text='點數不足'))
+                    Msg_package.flag=-1
+            else:
+                line_bot_api.reply_message(reply_token, TextSendMessage(text='你輸入的不是數字'))
+                Msg_package.flag=-1
     #case "會員資訊":
-    if(message_text=="會員資訊"or Msg_package.flag==7):
-        print("會員資訊")
-        line_bot_api.reply_message(reply_token,TextMessage(text=db_cmd.discount_information()))
-        Msg_package.flag=-1
+    if(message_text=="會員資訊"):
+        member_information=db_cmd.member_information(Msg_package.user_id)
+        line_bot_api.reply_message(reply_token, TextSendMessage(text=member_information))
 
 #加入好友後建立會員資料進資料庫
 @handler.add(FollowEvent)

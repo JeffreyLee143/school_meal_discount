@@ -373,14 +373,29 @@ def check_point(user_id):
     except Exception as ex:
         print(ex)
         
-def lottery(user_id, num):
+def lottery(user_id, num1, num2):
     try:
         conn = pymysql.connect(**db_settings)
         with conn.cursor() as cursor:
-            if(num==2 or num==3):
-                point = 20*num/2
+            if(num1 == num2 and num1!=6 and num1!=1):
                 command = "UPDATE members SET member_point = member_point + %s WHERE member_id = %s"
-                cursor.execute(command, (point, user_id))
+                cursor.execute(command, (0, user_id))
+                conn.commit()
+            elif((num1 == 6 or num2 == 6) and num1!=num2 and num1!=1):
+                command = "UPDATE members SET member_point = member_point + %s WHERE member_id = %s"
+                cursor.execute(command, (10, user_id))
+                conn.commit()
+            elif(num1==1 and num2!=6):
+                command = "UPDATE members SET member_point = member_point + %s WHERE member_id = %s"
+                cursor.execute(command, (15, user_id))
+                conn.commit()
+            elif(num1==1 and num2==6):
+                command = "UPDATE members SET member_point = member_point + %s WHERE member_id = %s"
+                cursor.execute(command, (25, user_id))
+                conn.commit()
+            elif(num1==6 and num2==6):
+                command = "UPDATE members SET member_point = member_point + %s WHERE member_id = %s"
+                cursor.execute(command, (60, user_id))
                 conn.commit()
             else:
                 command = "UPDATE members SET member_point = member_point - %s WHERE member_id = %s"
@@ -388,7 +403,7 @@ def lottery(user_id, num):
                 conn.commit()
     except Exception as ex:
         print(ex)
-'''     
+'''                
 def draw_discount(member_amount,point):
     try:
         conn = pymysql.connect(**db_settings)

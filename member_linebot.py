@@ -158,11 +158,27 @@ def lottery(msg, user_id, reply_token, hint):
             line_bot_api.reply_message(reply_token, TextMessage(text='你的點數不足20點\n歡迎集滿20點再來抽獎'))
             Msg_package.flag=-1
         else:
-            num = random.randint(1, 6)
-            db_cmd.lottery(user_id, num)
-            print(num)
-            if(num==2 or num==3):
-                get_point=int(20*num/2)
+            num1 = random.randint(1, 6)
+            num2 = random.randint(1, 6)
+            db_cmd.lottery(user_id, num1, num2)
+            if(num1 == num2 and num1!=6 and num1!=1):
+                get_point=20
+                line_bot_api.reply_message(reply_token, TextMessage(text='恭喜抽中'+str(get_point)+'點'))
+                Msg_package.flag=-1
+            elif((num1 == 6 or num2 == 6) and num1!=num2 and num1!=1):
+                get_point=30
+                line_bot_api.reply_message(reply_token, TextMessage(text='恭喜抽中'+str(get_point)+'點'))
+                Msg_package.flag=-1
+            elif(num1==1 and num2!=6):
+                get_point=35
+                line_bot_api.reply_message(reply_token, TextMessage(text='恭喜抽中'+str(get_point)+'點'))
+                Msg_package.flag=-1
+            elif(num1==1 and num2==6):
+                get_point=45
+                line_bot_api.reply_message(reply_token, TextMessage(text='恭喜抽中'+str(get_point)+'點'))
+                Msg_package.flag=-1
+            elif(num1==6 and num2==6):
+                get_point=80
                 line_bot_api.reply_message(reply_token, TextMessage(text='恭喜抽中'+str(get_point)+'點'))
                 Msg_package.flag=-1
             else:
@@ -243,7 +259,7 @@ def handle_message(event):
         Msg_package.flag = -1
     #case "抽獎"
     if (message_text=="我要抽獎" or Msg_package.flag==8):
-        hint = "如果抽中重複數字(44除外)獲得20點\n抽中任一數字為3則獲得30點\n抽中兩個3則獲得40點\n其餘4個數字代表沒抽到點數\n你確定要花費20點抽獎嗎\n是/否"
+        hint = "80點 2.8%\n45點 2.8%\n35點 13.9%\n30點 25%\n20點 11.1%\n未中獎 44.4%\n你確定要花費20點抽獎嗎\n是/否"
         if(Msg_package.flag==-1):
             print("我要抽獎")
             line_bot_api.reply_message(reply_token, TextSendMessage(text=hint))

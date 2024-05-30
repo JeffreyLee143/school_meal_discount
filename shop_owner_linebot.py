@@ -154,6 +154,6 @@ def handle_message(event):
         else:
             Msg_package.msg = message_text
             finish_pay(Msg_package.msg, user_id, reply_token, hint)
-# 启动服务
+# 啟動服務
 if __name__ == "__main__":
     app.run(port=5001)

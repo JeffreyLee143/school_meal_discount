@@ -403,37 +403,3 @@ def lottery(user_id, num1, num2):
                 conn.commit()
     except Exception as ex:
         print(ex)
-'''                
-def draw_discount(member_amount,point):
-    try:
-        conn = pymysql.connect(**db_settings)
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM members")# 查詢會員數量
-            total_member = cursor._rows[0]
-            total_member=total_member[0]#tuple轉成int
-            draw_list=random.sample(range(1,total_member+1),member_amount)#生成中獎名單
-            draw_list.sort()#排序
-            for i in draw_list:
-                command = "SELECT member_id FROM members LIMIT %s,%s"
-                cursor.execute(
-                    command, (i-1,1)#抓取會員id
-                )
-                member_id=cursor._rows[0]
-                add_point(member_id[0],point*20)#引用add_point新增點數
-    except Exception as ex:
-        print(ex)
-''' 
-#with open('C:\\Users\\USER\\Desktop\\school_menu_discount\\menu.csv', 'rb') as f:
-#    result = chardet.detect(f.read())
-#    encoding = result['encoding']
-#with open("C:\\Users\\USER\\Desktop\\school_menu_discount\\menu.csv",newline='',encoding=encoding) as csvfile:
-#    count = 1
-#    shop_id=1
-#    menu = csv.DictReader(csvfile)
-#    for product in menu:
-#        if(int(product['shop_id'])!=shop_id):
-#            count=1
-#            shop_id+=1
-#        add_menu(int(product['shop_id']),product['product_name'],float(product['cost']),count)
-#        count+=1
-#print(view_order(22))
